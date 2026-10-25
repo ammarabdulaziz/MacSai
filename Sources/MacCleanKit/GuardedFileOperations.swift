@@ -7,17 +7,20 @@ import Darwin
 /// is checked after that atomic move, not just before it.
 public enum GuardedFileOperations {
     public static func trash(_ url: URL, inode: UInt64 = 0, device: Int32 = 0) throws -> URL {
-        // Resolve the system-selected, volume-appropriate Trash before moving
-        // anything. If the volume has no usable Trash, fail without deleting.
-        let trash = try FileManager.default.url(
-            for: .trashDirectory, in: .userDomainMask, appropriateFor: url, create: true)
-        let destination = try PinnedDirectory(trash)
         let captured = try CapturedFile(url, inode: inode, device: device)
-        let name = "\(url.deletingPathExtension().lastPathComponent)-\(UUID().uuidString)"
-            + (url.pathExtension.isEmpty ? "" : ".\(url.pathExtension)")
-        do { try captured.move(to: destination, name: name) }
+        do {
+            // Ask Foundation for the volume-appropriate Trash using an item
+            // that still exists. If this fails, restore the captured entry.
+            let trash = try FileManager.default.url(
+                for: .trashDirectory, in: .userDomainMask,
+                appropriateFor: captured.stagingURL.appendingPathComponent("original"), create: true)
+            let destination = try PinnedDirectory(trash)
+            let name = "\(url.deletingPathExtension().lastPathComponent)-\(UUID().uuidString)"
+                + (url.pathExtension.isEmpty ? "" : ".\(url.pathExtension)")
+            try captured.move(to: destination, name: name)
+            return destination.url.appendingPathComponent(name)
+        }
         catch { try captured.restore(); throw error }
-        return destination.url.appendingPathComponent(name)
     }
 
     public static func remove(_ url: URL, inode: UInt64 = 0, device: Int32 = 0) throws {
@@ -46,7 +49,7 @@ enum GuardedFileError: LocalizedError {
         case .symbolicLink: "Refusing a symbolic link in a destructive operation."
         case .hardLinked: "Secure erase cannot overwrite a file with other hard links."
         case .directory: "Secure erase cannot be used on directories."
-        case .recovery(let url): "The original path is occupied. The untouched item is preserved at \(url.path)."
+        case .recovery(let url): "The original path is occupied. The staged item is preserved at \(url.path)."
         }
     }
 }
@@ -96,11 +99,17 @@ final class PinnedDirectory {
     let url: URL
 
     init(_ url: URL) throws {
-        self.url = url.resolvingSymlinksInPath().standardizedFileURL
+        // Foundation standardization can shorten /private/var back to the
+        // /var symlink. Walk the POSIX realpath string, not URL.pathComponents.
+        guard let resolved = realpath(url.path(percentEncoded: false), nil) else { throw fileSystemError() }
+        let canonical = String(cString: resolved)
+        free(resolved)
+        self.url = URL(fileURLWithPath: canonical, isDirectory: true)
         var current = open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC)
         guard current >= 0 else { throw fileSystemError() }
         do {
-            for component in self.url.pathComponents where component != "/" {
+            for part in canonical.split(separator: "/") {
+                let component = String(part)
                 guard component != ".", component != ".." else { throw GuardedFileError.changed }
                 let next = openat(current, component, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
                 guard next >= 0 else { throw fileSystemError() }

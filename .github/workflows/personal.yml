@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: personal-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test-and-package:
     runs-on: macos-15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - name: Toolchain
@@ -18,8 +22,19 @@ jobs:
         run: bash -n scripts/install.sh scripts/install-personal.sh scripts/build-dmg.sh
       - name: Resolve dependencies
         run: swift package resolve
+      - name: Record resolved dependency versions
+        uses: actions/upload-artifact@v4
+        with:
+          name: personal-build-dependencies
+          path: Package.resolved
+      - name: Filesystem and cleanup regressions
+        env:
+          NSUnbufferedIO: "YES"
+        run: swift test --enable-code-coverage --filter 'GuardedFileOperationsTests|FileConsolidatorTests|ShredderModuleTests|CleanActionsTests|CleaningEngineTests|PersonalSafetyTests'
       - name: Test filesystem safety and full regression suite
-        run: swift test --enable-code-coverage
+        env:
+          NSUnbufferedIO: "YES"
+        run: swift test --enable-code-coverage --skip-build
       - name: Build native app for inspection
         env:
           BUILD_ARCHS: --arch arm64
@@ -28,11 +43,6 @@ jobs:
         run: |
           codesign --verify --deep --strict ".build/dmg/Mac Sai Personal.app"
           bash scripts/check-network-surface.sh ".build/dmg/Mac Sai Personal.app/Contents/MacOS/MacClean"
-      - name: Record resolved dependency versions
-        uses: actions/upload-artifact@v4
-        with:
-          name: personal-build-dependencies
-          path: Package.resolved
       - name: Package inspection build
         run: |
           ditto -c -k --keepParent ".build/dmg/Mac Sai Personal.app" .build/MacSai-Personal-inspection.zip

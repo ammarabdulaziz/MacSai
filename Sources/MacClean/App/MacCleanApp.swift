@@ -92,7 +92,7 @@ struct MacCleanApp: App {
         }
     }
 
-    /// First-launch default: ON (per product decision). On every launch
+    /// First-launch default: OFF for the personal build. On every launch
     /// we re-sync the SMAppService state with the preference so the
     /// truth of "is the helper actually running" matches the toggle —
     /// macOS occasionally drops registrations after updates, especially
@@ -101,7 +101,7 @@ struct MacCleanApp: App {
     private func syncMenuBarOnLaunch() {
         if !menuBarFirstLaunchDone {
             menuBarFirstLaunchDone = true
-            // showMenuBarWidget already defaults to true; setEnabled is
+            // showMenuBarWidget defaults to false; setEnabled is
             // idempotent if already registered.
         }
         // Async: the SMAppService XPC round-trip must not block app launch.

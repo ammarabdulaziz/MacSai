@@ -3,7 +3,7 @@ import Foundation
 /// Inter-process state shared between the main Mac Sai app and the
 /// menu bar widget. We use a named `UserDefaults` suite — both processes
 /// open the same suite by name, macOS backs it with a single plist at
-/// `~/Library/Preferences/com.macclean.shared.plist`, and writes from
+/// `~/Library/Preferences/com.ammarabdulaziz.macsai.shared.plist`, and writes from
 /// one process show up in the other on the next read.
 ///
 /// App Groups would be the canonical macOS pattern, but a named suite is

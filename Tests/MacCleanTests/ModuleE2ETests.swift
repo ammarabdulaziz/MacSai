@@ -129,6 +129,7 @@ final class ModuleE2ETests: XCTestCase {
         )
 
         let scan = await MalwareModule(depth: .quick).scan()
+        XCTAssertTrue(scan.allSatisfy { !$0.autoSelect }, "heuristic findings must require manual selection")
         let urls = scan.flatMap(\.items).map { canon($0.url) }
         XCTAssertTrue(urls.contains(canon(agent)),
                       "agent with name containing 'genio' must be flagged as malware")
