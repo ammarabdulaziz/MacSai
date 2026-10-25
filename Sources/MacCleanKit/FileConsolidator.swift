@@ -110,8 +110,8 @@ public enum FileConsolidator {
             guard sourceIdentity.isRegular else { return .skipped(.notRegularFile) }
             let captured = try CapturedFile(copy)
             do {
-                let copyFD = try captured.openOriginal(O_RDONLY)
-                defer { close(copyFD) }
+                var copyFD = try captured.openOriginal(O_RDONLY)
+                defer { if copyFD >= 0 { close(copyFD) } }
                 let copyIdentity = try FileIdentity(descriptor: copyFD)
                 guard copyIdentity.isRegular else { throw GuardedFileError.changed }
                 guard let masterHash = FileHashing.sha256(descriptor: masterFD),
@@ -154,6 +154,10 @@ public enum FileConsolidator {
                     return .skipped(.contentChanged)
                 }
                 let reclaimed = UInt64(max(0, copyIdentity.value.st_blocks)) * 512
+                // Release the original inode before unlinking it. Otherwise
+                // its open descriptor retains its blocks past publication.
+                close(copyFD)
+                copyFD = -1
                 try captured.replace(with: name)
                 return .reclaimed(bytes: reclaimed)
             } catch {

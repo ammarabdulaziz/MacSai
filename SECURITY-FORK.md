@@ -6,7 +6,7 @@ the unpublished v1.26.0 changes from upstream main.
 
 ## Install this version on your Mac
 
-Requires macOS 14 or later and a Swift 6 toolchain (Xcode 16 or later).
+Requires macOS 14 or later and a Swift 6.1 toolchain (Xcode 16.3 or later).
 
 ```bash
 git clone https://github.com/ammarabdulaziz/MacSai.git
@@ -25,6 +25,10 @@ update checks and the menu-bar login widget default to off. Full Disk Access is
 not granted by the installer. You can grant it manually if you need a particular
 protected-area scan, and revoke it after that scan. Administrator operations
 still require the standard macOS authorization prompt.
+
+The dependency lockfile pins the GRDB revision used by the macOS build.
+Use `swift package resolve --force-resolved-versions` when checking a build;
+review dependency updates explicitly rather than discarding the lockfile.
 
 ## Changes
 

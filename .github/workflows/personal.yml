@@ -21,7 +21,7 @@ jobs:
       - name: Check shell scripts
         run: bash -n scripts/install.sh scripts/install-personal.sh scripts/build-dmg.sh
       - name: Resolve dependencies
-        run: swift package resolve
+        run: swift package resolve --force-resolved-versions
       - name: Record resolved dependency versions
         uses: actions/upload-artifact@v4
         with:

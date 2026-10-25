@@ -36,7 +36,7 @@ public enum GuardedFileOperations {
     }
 }
 
-enum GuardedFileError: LocalizedError {
+enum GuardedFileError: LocalizedError, Equatable {
     case changed
     case symbolicLink
     case hardLinked

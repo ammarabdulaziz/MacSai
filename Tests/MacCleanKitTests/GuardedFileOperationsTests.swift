@@ -23,7 +23,9 @@ final class GuardedFileOperationsTests: XCTestCase {
         let original = try file("original")
         let alias = directory.appendingPathComponent("selected-alias")
         try FileManager.default.linkItem(at: original, to: alias)
-        XCTAssertThrowsError(try GuardedFileOperations.secureErase(alias))
+        XCTAssertThrowsError(try GuardedFileOperations.secureErase(alias)) {
+            XCTAssertEqual($0 as? GuardedFileError, .hardLinked)
+        }
         XCTAssertEqual(try String(contentsOf: original, encoding: .utf8), "keep these bytes")
         XCTAssertEqual(try String(contentsOf: alias, encoding: .utf8), "keep these bytes")
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted(),

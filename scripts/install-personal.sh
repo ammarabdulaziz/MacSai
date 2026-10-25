@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 if [ "$(uname -s)" != Darwin ]; then
-    echo "This installer requires macOS 14 or later and Xcode 16 or later."
+    echo "This installer requires macOS 14 or later and Xcode 16.3 or later."
     exit 1
 fi
 if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 14 ]; then
@@ -12,6 +12,7 @@ if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 14 ]; then
     exit 1
 fi
 xcrun --find swift >/dev/null
+swift package resolve --force-resolved-versions
 echo "Testing the current source checkout..."
 swift test
 BUILD_ARCHS="--arch $(uname -m)" bash scripts/build-dmg.sh --app-only
