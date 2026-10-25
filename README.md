@@ -1,3 +1,8 @@
+> **Personal fork:** use [the source-build installation instructions](SECURITY-FORK.md).
+> This version includes filesystem safety changes and conservative defaults.
+> It is not the upstream notarized release. The Homebrew command and upstream
+> release links in the inherited documentation below do not install this fork.
+
 <p align="center">
   <img src="assets/app_icon.png" width="150" alt="Mac Sai Icon" />
 </p>
@@ -137,7 +142,7 @@ A full-featured Mac cleaner should not cost a yearly subscription or ask you to 
 ### 🛡️ Protection
 | Module | What it does |
 |--------|------------|
-| **Malware Removal** | Signature-based scanning at 3 depths (Quick / Balanced / Deep): launch agents and daemons, app bundles, browser extensions, and known adware/malware patterns. Exact-hash matching against Apple's XProtect signatures already on your Mac, offline; Safari extensions on Apple's blocklist are listed for review, never pre-selected (not an antivirus, and it says so) |
+| **Malware Removal** | Signature-based scanning at 3 depths (Quick / Balanced / Deep): launch agents and daemons, browser extensions, and known adware/malware patterns (curated list, not an antivirus, and it says so) |
 | **Privacy** | Cleans Safari, Chrome, and Firefox history, cookies, and cache, with time filters. Safari **bookmarks are never touched** |
 | **Browser Extensions** | Lists the extensions installed in Safari, Chrome, Brave, Edge, Arc, and Firefox. Chromium and Firefox extensions you installed yourself can go to the Trash while that browser is closed; ones installed by policy or by the browser itself are shown but left alone. Safari extensions link to Safari's settings |
 | **Saved Wi-Fi** | Lists your preferred wireless networks and forgets the ones you pick |

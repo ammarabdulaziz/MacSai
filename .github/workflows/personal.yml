@@ -1,0 +1,45 @@
+name: Personal macOS build
+on:
+  push:
+    branches: [harden-personal, main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-package:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Toolchain
+        run: swift --version
+      - name: Check shell scripts
+        run: bash -n scripts/install.sh scripts/install-personal.sh scripts/build-dmg.sh
+      - name: Resolve dependencies
+        run: swift package resolve
+      - name: Test filesystem safety and full regression suite
+        run: swift test --enable-code-coverage
+      - name: Build native app for inspection
+        env:
+          BUILD_ARCHS: --arch arm64
+        run: bash scripts/build-dmg.sh --app-only
+      - name: Verify local signature and network surface
+        run: |
+          codesign --verify --deep --strict ".build/dmg/Mac Sai Personal.app"
+          bash scripts/check-network-surface.sh ".build/dmg/Mac Sai Personal.app/Contents/MacOS/MacClean"
+      - name: Record resolved dependency versions
+        uses: actions/upload-artifact@v4
+        with:
+          name: personal-build-dependencies
+          path: Package.resolved
+      - name: Package inspection build
+        run: |
+          ditto -c -k --keepParent ".build/dmg/Mac Sai Personal.app" .build/MacSai-Personal-inspection.zip
+          shasum -a 256 .build/MacSai-Personal-inspection.zip > .build/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MacSai-Personal-inspection-arm64
+          path: |
+            .build/MacSai-Personal-inspection.zip
+            .build/SHA256SUMS

@@ -1,70 +1,10 @@
 #!/bin/bash
-# One-line installer for Mac Sai.
-# Usage: curl -fsSL https://raw.githubusercontent.com/iliyami/MacSai/main/scripts/install.sh | bash
-
+# This fork installs only locally compiled source. Piping downloaded shell
+# code into bash is intentionally unsupported.
 set -euo pipefail
-
-REPO="iliyami/MacSai"
-APP_NAME="Mac Sai.app"
-INSTALL_DIR="${INSTALL_DIR:-/Applications}"
-
-cyan() { printf "\033[36m%s\033[0m\n" "$1"; }
-green() { printf "\033[32m%s\033[0m\n" "$1"; }
-red() { printf "\033[31m%s\033[0m\n" "$1"; }
-
-# Check macOS version
-OS_VERSION=$(sw_vers -productVersion | cut -d. -f1)
-if [ "$OS_VERSION" -lt 14 ]; then
-    red "Mac Sai requires macOS 14 (Sonoma) or later. You have $(sw_vers -productVersion)."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ ! -f "$SCRIPT_DIR/install-personal.sh" ]; then
+    echo "Clone ammarabdulaziz/MacSai, then run bash scripts/install-personal.sh."
     exit 1
 fi
-
-cyan "Fetching latest release info..."
-LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest")
-DMG_URL=$(echo "$LATEST" | grep -oE '"browser_download_url":\s*"[^"]+\.dmg"' | head -1 | cut -d'"' -f4)
-VERSION=$(echo "$LATEST" | grep -oE '"tag_name":\s*"[^"]+"' | head -1 | cut -d'"' -f4)
-
-if [ -z "$DMG_URL" ]; then
-    red "Could not find a DMG in the latest release. Aborting."
-    exit 1
-fi
-
-cyan "Downloading Mac Sai $VERSION..."
-TMP=$(mktemp -d)
-DMG_PATH="$TMP/macclean.dmg"
-# Mount at a known path: `-quiet` prints nothing to parse, and the volume
-# name ("Mac Sai") contains a space.
-MOUNT="$TMP/mount"
-cleanup() {
-    hdiutil detach -quiet "$MOUNT" 2>/dev/null || true
-    rm -rf "$TMP"
-}
-trap cleanup EXIT
-curl -fsSL "$DMG_URL" -o "$DMG_PATH"
-
-cyan "Mounting DMG..."
-mkdir -p "$MOUNT"
-if ! hdiutil attach -nobrowse -noautoopen -quiet -mountpoint "$MOUNT" "$DMG_PATH"; then
-    red "Failed to mount the DMG."
-    exit 1
-fi
-
-cyan "Installing to $INSTALL_DIR..."
-if [ -d "$INSTALL_DIR/$APP_NAME" ]; then
-    rm -rf "$INSTALL_DIR/$APP_NAME"
-fi
-cp -R "$MOUNT/$APP_NAME" "$INSTALL_DIR/"
-
-cyan "Cleaning up..."
-cleanup
-trap - EXIT
-
-# Mac Sai is notarized by Apple, so no quarantine workaround is needed.
-
-green ""
-green "✓ Mac Sai $VERSION installed to $INSTALL_DIR/$APP_NAME"
-green ""
-echo "Launch with: open \"$INSTALL_DIR/$APP_NAME\""
-echo ""
-echo "For Mail, Safari, and Privacy scans, grant Full Disk Access:"
-echo "  System Settings → Privacy & Security → Full Disk Access"
+exec bash "$SCRIPT_DIR/install-personal.sh" "$@"

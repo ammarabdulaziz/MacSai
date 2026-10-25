@@ -61,7 +61,7 @@ fi
 
 # 3) Sanity: the two disclosed update endpoints should be present.
 for endpoint in \
-    "api.github.com/repos/iliyami/MacSai/releases/latest" \
+    "api.github.com/repos/ammarabdulaziz/MacSai/releases/latest" \
     "formulae.brew.sh/api/cask/mac-sai.json"; do
     if ! grep -qF "$endpoint" <<<"$STRS"; then
         echo "::warning::expected update endpoint not found in binary: $endpoint"

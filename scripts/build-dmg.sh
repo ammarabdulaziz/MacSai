@@ -17,8 +17,8 @@
 
 set -euo pipefail
 
-APP_NAME="Mac Sai"
-BUNDLE_ID="com.macclean.app"
+APP_NAME="Mac Sai Personal"
+BUNDLE_ID="com.ammarabdulaziz.macsai.app"
 VERSION="${VERSION:-$(cat VERSION 2>/dev/null | tr -d '[:space:]' || echo '1.0.0')}"
 # BUILD_DIR is resolved AFTER the build via `swift build --show-bin-path`:
 # multi-arch builds emit to .build/apple/Products/Release/ while single-arch
@@ -187,7 +187,7 @@ cat > "${MENU_APP}/Contents/Info.plist" << MENU_PLIST
     <key>CFBundleExecutable</key>
     <string>MacCleanMenu</string>
     <key>CFBundleIdentifier</key>
-    <string>com.macclean.menu</string>
+    <string>com.ammarabdulaziz.macsai.menu</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

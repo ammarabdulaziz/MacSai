@@ -1,5 +1,6 @@
 import XCTest
 import Foundation
+import Darwin
 @testable import MacCleanKit
 
 final class FileConsolidatorTests: XCTestCase {
@@ -75,6 +76,41 @@ final class FileConsolidatorTests: XCTestCase {
         XCTAssertEqual(FileConsolidator.consolidate(master: master, copy: copy), .skipped(.contentChanged))
         // Untouched.
         XCTAssertEqual(try Data(contentsOf: copy), Data("DIFFERENT".utf8))
+    }
+
+    func testConsolidatePreservesDestinationQuarantineAndResourceFork() throws {
+        let payload = Data(repeating: 0x35, count: 32 * 1024)
+        let master = try write("metadata-master", payload)
+        let copy = try write("metadata-copy", payload)
+        func set(_ url: URL, _ name: String, _ bytes: Data) throws {
+            let result = bytes.withUnsafeBytes { setxattr(url.path, name, $0.baseAddress, $0.count, 0, 0) }
+            guard result == 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
+        }
+        func get(_ url: URL, _ name: String) throws -> Data {
+            let size = getxattr(url.path, name, nil, 0, 0, 0)
+            guard size >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
+            var data = Data(count: size)
+            let read = data.withUnsafeMutableBytes { getxattr(url.path, name, $0.baseAddress, $0.count, 0, 0) }
+            guard read == size else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
+            return data
+        }
+        let quarantine = Data("0081;00000000;MacSaiTest;".utf8)
+        let resource = Data("destination-only resource fork".utf8)
+        let tag = Data("destination tag".utf8)
+        try set(copy, "com.apple.quarantine", quarantine)
+        try set(copy, "com.apple.ResourceFork", resource)
+        try set(copy, "org.macsai.test", tag)
+        try set(master, "org.macsai.master-only", Data("must not leak".utf8))
+
+        guard case .reclaimed = FileConsolidator.consolidate(master: master, copy: copy) else {
+            return XCTFail("metadata-preserving consolidation failed")
+        }
+        XCTAssertEqual(try get(copy, "com.apple.quarantine"), quarantine)
+        XCTAssertEqual(try get(copy, "com.apple.ResourceFork"), resource)
+        XCTAssertEqual(try get(copy, "org.macsai.test"), tag)
+        XCTAssertEqual(getxattr(copy.path, "org.macsai.master-only", nil, 0, 0, 0), -1)
+        XCTAssertEqual(try Data(contentsOf: copy), payload)
+        XCTAssertEqual(try Data(contentsOf: master), payload)
     }
 
     func testConsolidateIsIdempotentAndKeepsIntegrity() throws {

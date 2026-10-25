@@ -56,8 +56,8 @@ public enum UpdateChecker {
 
     /// Caskroom locations for Apple Silicon and Intel Homebrew prefixes.
     public static let defaultCaskroomPaths = [
-        "/opt/homebrew/Caskroom/mac-sai",
-        "/usr/local/Caskroom/mac-sai",
+        "/opt/homebrew/Caskroom/mac-sai-personal",
+        "/usr/local/Caskroom/mac-sai-personal",
     ]
 
     /// True when the app was installed via the Homebrew cask. The Settings

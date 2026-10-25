@@ -1,10 +1,10 @@
 import Foundation
 
 public enum MCConstants {
-    public static let appName = "Mac Sai"
-    public static let bundleIdentifier = "com.macclean.app"
-    public static let helperBundleIdentifier = "com.macclean.helper"
-    public static let menuBundleIdentifier = "com.macclean.menu"
+    public static let appName = "Mac Sai Personal"
+    public static let bundleIdentifier = "com.ammarabdulaziz.macsai.app"
+    public static let helperBundleIdentifier = "com.ammarabdulaziz.macsai.helper"
+    public static let menuBundleIdentifier = "com.ammarabdulaziz.macsai.menu"
 
     /// Apple Developer Team ID. The XPC code-signing requirements pin this so
     /// only our real Developer-ID-signed binaries can talk to the root helper.
@@ -204,20 +204,20 @@ public enum MCConstants {
 
     // MARK: - Log File Path
 
-    public static let operationLogDir = userLogs.appending(path: "MacClean")
+    public static let operationLogDir = userLogs.appending(path: "MacSaiPersonal")
     public static let operationLogFile = operationLogDir.appending(path: "operations.log")
     /// JSON history of Trash-first cleans for one-click Restore (#223).
     public static let cleanHistoryFile = operationLogDir.appending(path: "clean-history.json")
 
     // MARK: - Project links
 
-    public static let repoURL = URL(string: "https://github.com/iliyami/MacSai")!
-    public static let issuesURL = URL(string: "https://github.com/iliyami/MacSai/issues/new/choose")!
-    public static let releasesURL = URL(string: "https://github.com/iliyami/MacSai/releases")!
+    public static let repoURL = URL(string: "https://github.com/ammarabdulaziz/MacSai")!
+    public static let issuesURL = URL(string: "https://github.com/ammarabdulaziz/MacSai/issues/new/choose")!
+    public static let releasesURL = URL(string: "https://github.com/ammarabdulaziz/MacSai/releases")!
     /// Opened in the browser from the post-clean support card and Settings.
     /// Never fetched by the app, so it is not part of the network surface.
     public static let supportURL = URL(string: "https://buymeacoffee.com/iliyami")!
-    public static let latestReleaseAPI = URL(string: "https://api.github.com/repos/iliyami/MacSai/releases/latest")!
+    public static let latestReleaseAPI = URL(string: "https://api.github.com/repos/ammarabdulaziz/MacSai/releases/latest")!
     /// Homebrew's public API for the official cask. Its `version` reflects what
     /// `brew upgrade --cask mac-sai` can actually install right now (autobump
     /// lags GitHub releases by a few days), so Homebrew installs check this
@@ -232,5 +232,5 @@ public enum MCConstants {
     // plugin was tried (commit history) but doesn't work under multi-arch
     // `swift build --arch arm64 --arch x86_64` because xcbuild doesn't
     // execute plugins.
-    public static let appVersion = "1.26.0"
+    public static let appVersion = "1.25.7"
 }

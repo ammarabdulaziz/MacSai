@@ -5,22 +5,15 @@ import MacCleanKit
 // `ScanTarget` moved to MacCleanKit for testability — see MacCleanKit/ScanTarget.swift.
 
 public actor TargetedScanner {
-    static let defaultResourceKeys: [URLResourceKey] = [
+    private let resourceKeys: [URLResourceKey] = [
         .fileSizeKey, .fileAllocatedSizeKey,
         .totalFileSizeKey, .totalFileAllocatedSizeKey,
         .isDirectoryKey, .isSymbolicLinkKey, .isPackageKey,
         .contentModificationDateKey, .creationDateKey,
         .contentTypeKey, .nameKey,
     ]
-    private let resourceKeys = TargetedScanner.defaultResourceKeys
 
     public init() {}
-
-    /// A `FileItem` for one known path, with the same metadata a scan
-    /// collects. Nil if the path can't be read.
-    public static func fileItem(at url: URL) -> FileItem? {
-        makeFileItem(from: url, keys: defaultResourceKeys)
-    }
 
     public func scan(targets: [ScanTarget]) async -> [FileItem] {
         await scanReportingPermissions(targets: targets).items

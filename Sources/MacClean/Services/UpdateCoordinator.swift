@@ -26,9 +26,9 @@ final class UpdateCoordinator {
         static let skipped = "skippedUpdateVersion"
     }
 
-    /// Default ON: absent key reads as enabled.
+    /// Personal build: update checks require explicit opt-in.
     private var automaticChecksEnabled: Bool {
-        defaults.object(forKey: Key.autoCheck) == nil ? true : defaults.bool(forKey: Key.autoCheck)
+        defaults.bool(forKey: Key.autoCheck)
     }
 
     private var lastCheck: Date? {

@@ -6,7 +6,7 @@ public final class AppDatabase: Sendable {
     private let dbPool: DatabasePool
 
     public static let shared: AppDatabase = {
-        let dbDir = MCConstants.userAppSupport.appending(path: "MacClean")
+        let dbDir = MCConstants.userAppSupport.appending(path: "MacSaiPersonal")
         let dbPath = dbDir.appending(path: "cache.sqlite")
 
         try? FileManager.default.createDirectory(at: dbDir, withIntermediateDirectories: true)

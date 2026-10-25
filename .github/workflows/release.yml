@@ -17,6 +17,7 @@ on:
 
 jobs:
   release:
+    if: github.repository == 'iliyami/MacSai'
     name: Build & Release DMG
     runs-on: macos-15
     permissions:

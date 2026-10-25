@@ -16,11 +16,11 @@ struct SettingsPageView: View {
         case failed(message: String)
     }
 
-    @AppStorage("showMenuBarWidget") private var showMenuBarWidget = true
+    @AppStorage("showMenuBarWidget") private var showMenuBarWidget = false
     @AppStorage(MenuBarMetric.defaultsKey, store: SharedAppState.defaults) private var menuBarMetricRaw = MenuBarMetric.diskFree.rawValue
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage("removeBackgroundColors") private var removeBackgroundColors = false
-    @AppStorage("automaticUpdateChecks") private var automaticUpdateChecks = true
+    @AppStorage("automaticUpdateChecks") private var automaticUpdateChecks = false
     @AppStorage("lastUpdateCheckDate") private var lastUpdateCheckTimestamp: Double = 0
     @AppStorage(AppearanceManager.defaultsKey) private var appearanceRaw = AppearanceMode.dark.rawValue
     @AppStorage(AppLanguage.defaultsKey, store: SharedAppState.defaults) private var appLanguageRaw = AppLanguage.system.rawValue

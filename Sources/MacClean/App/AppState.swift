@@ -47,9 +47,7 @@ public final class AppState {
             SystemJunkModule(),
             MailAttachmentsModule(),
             TrashBinsModule(),
-            // Smart Scan stays light: installed apps' executables are only
-            // hashed from the Malware Removal screen.
-            MalwareModule(hashesApplications: false),
+            MalwareModule(),
             PrivacyModule(),
             OptimizationModule(),
             MaintenanceModule(),

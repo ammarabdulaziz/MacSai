@@ -84,14 +84,13 @@ public actor SecureEraser {
             do {
                 switch mode {
                 case .standard:
-                    try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+                    _ = try GuardedFileOperations.trash(url)
 
                 case .permanent:
-                    try FileManager.default.removeItem(at: url)
+                    try GuardedFileOperations.remove(url)
 
                 case .secure:
-                    try secureOverwrite(url)
-                    try FileManager.default.removeItem(at: url)
+                    try GuardedFileOperations.secureErase(url)
                 }
 
                 erasedCount += 1
@@ -102,46 +101,6 @@ public actor SecureEraser {
         }
 
         return EraseResult(erasedCount: erasedCount, totalSize: totalSize, errors: errors)
-    }
-
-    private func secureOverwrite(_ url: URL) throws {
-        // On SSDs, TRIM handles physical block zeroing automatically after deletion.
-        // This overwrite is best-effort: it writes over the logical file content,
-        // but the SSD controller may redirect the write to a new physical block.
-        // For true security, recommend FileVault (full-disk encryption).
-        let values = try url.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey, .isSymbolicLinkKey])
-        // Refuse directories: returning here would let the caller recursively
-        // remove their contents without overwriting any of the files.
-        guard values.isDirectory != true else {
-            throw EraseError.secureEraseDirectory(url.path(percentEncoded: false))
-        }
-        // Never follow a symlink: opening it for writing would zero the TARGET
-        // file's contents, not the link. Refuse rather than corrupt the target.
-        guard values.isSymbolicLink != true else {
-            throw SafetyGuard.SafetyError.symlinkTarget(url.path(percentEncoded: false))
-        }
-        let size = values.fileSize ?? 0
-        guard size > 0 else { return }
-
-        // Propagate an open failure instead of silently returning: a file we
-        // couldn't overwrite must NOT be deleted and reported as a successful
-        // secure erase (e.g. a read-only file in a writable directory).
-        let handle = try FileHandle(forWritingTo: url)
-        defer { try? handle.close() }
-
-        // Single pass of zeros
-        let bufferSize = min(size, 65536)
-        let zeros = Data(count: bufferSize)
-        var remaining = size
-
-        handle.seek(toFileOffset: 0)
-        while remaining > 0 {
-            let writeSize = min(remaining, bufferSize)
-            handle.write(zeros.prefix(writeSize))
-            remaining -= writeSize
-        }
-
-        handle.truncateFile(atOffset: 0)
     }
 
     private func fileSize(_ url: URL) -> UInt64 {

@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public enum ConsolidationOutcome: Equatable, Sendable {
     case reclaimed(bytes: UInt64)
@@ -95,52 +96,73 @@ public enum FileConsolidator {
         if let reason = ineligibilityReason(master: master, copy: copy, safetyGuard: safetyGuard) {
             return .skipped(reason)
         }
-        // Re-verify identical NOW (TOCTOU guard: the file may have changed since the scan).
-        guard let masterHash = FileHashing.sha256(master),
-              let copyHash = FileHashing.sha256(copy),
-              masterHash == copyHash else {
-            return .skipped(.contentChanged)
+        // Pin both source objects before hashing or cloning. The destination
+        // is detached into a private same-volume directory, so a path swap
+        // cannot redirect either metadata copying or the final replacement.
+        do {
+            let sourceParent = try PinnedDirectory(master.deletingLastPathComponent())
+            try safetyGuard.validatePath(master)
+            let masterFD = openat(sourceParent.descriptor, master.lastPathComponent,
+                                  O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+            guard masterFD >= 0 else { throw fileSystemError() }
+            defer { close(masterFD) }
+            let sourceIdentity = try FileIdentity(descriptor: masterFD)
+            guard sourceIdentity.isRegular else { return .skipped(.notRegularFile) }
+            let captured = try CapturedFile(copy)
+            do {
+                let copyFD = try captured.openOriginal(O_RDONLY)
+                defer { close(copyFD) }
+                let copyIdentity = try FileIdentity(descriptor: copyFD)
+                guard copyIdentity.isRegular else { throw GuardedFileError.changed }
+                guard let masterHash = FileHashing.sha256(descriptor: masterFD),
+                      let copyHash = FileHashing.sha256(descriptor: copyFD),
+                      masterHash == copyHash else {
+                    try captured.restore()
+                    return .skipped(.contentChanged)
+                }
+                let name = "replacement"
+                guard fclonefileat(masterFD, captured.stagingDescriptor, name, UInt32(CLONE_NOOWNERCOPY)) == 0
+                else { throw fileSystemError() }
+                defer { _ = unlinkat(captured.stagingDescriptor, name, 0) }
+                let cloneFD = openat(captured.stagingDescriptor, name, O_RDWR | O_NOFOLLOW | O_CLOEXEC)
+                guard cloneFD >= 0 else { throw fileSystemError() }
+                defer { close(cloneFD) }
+                // clonefile copies the master's xattrs. Remove them before
+                // applying the destination's exact metadata, including its
+                // resource fork, quarantine, Finder tags, ACL, and timestamps.
+                let count = flistxattr(cloneFD, nil, 0, 0)
+                guard count >= 0 else { throw fileSystemError() }
+                if count > 0 {
+                    var names = [CChar](repeating: 0, count: count)
+                    let read = names.withUnsafeMutableBufferPointer {
+                        flistxattr(cloneFD, $0.baseAddress, $0.count, 0)
+                    }
+                    guard read >= 0 else { throw fileSystemError() }
+                    var offset = 0
+                    while offset < read {
+                        let attribute = names.withUnsafeBufferPointer { String(cString: $0.baseAddress! + offset) }
+                        guard fremovexattr(cloneFD, attribute, 0) == 0 else { throw fileSystemError() }
+                        offset += attribute.utf8.count + 1
+                    }
+                }
+                guard fcopyfile(copyFD, cloneFD, nil, copyfile_flags_t(COPYFILE_METADATA)) == 0
+                else { throw fileSystemError() }
+                guard FileHashing.sha256(descriptor: cloneFD) == masterHash,
+                      sourceIdentity.sameRevision(as: try FileIdentity(descriptor: masterFD)),
+                      copyIdentity.sameRevision(as: try FileIdentity(descriptor: copyFD)) else {
+                    try captured.restore()
+                    return .skipped(.contentChanged)
+                }
+                let reclaimed = UInt64(max(0, copyIdentity.value.st_blocks)) * 512
+                try captured.replace(with: name)
+                return .reclaimed(bytes: reclaimed)
+            } catch {
+                try captured.restore()
+                throw error
+            }
+        } catch {
+            return .failed(error.localizedDescription)
         }
-
-        let fm = FileManager.default
-        let copyPath = copy.path(percentEncoded: false)
-
-        // Snapshot metadata + allocated size (the reclaimed figure).
-        let attrs = try? fm.attributesOfItem(atPath: copyPath)
-        let perms = attrs?[.posixPermissions] as? NSNumber
-        let mtime = attrs?[.modificationDate] as? Date
-        let reclaimed = UInt64((try? copy.resourceValues(
-            forKeys: [.totalFileAllocatedSizeKey]))?.totalFileAllocatedSize ?? 0)
-
-        // Clone master into a unique hidden temp in the copy's own directory
-        // (same volume, so the later rename is atomic).
-        let tempURL = copy.deletingLastPathComponent()
-            .appendingPathComponent(".\(copy.lastPathComponent).consolidate-\(UUID().uuidString)")
-        let tempPath = tempURL.path(percentEncoded: false)
-        let cloned = master.path(percentEncoded: false).withCString { src in
-            tempPath.withCString { dst in clonefile(src, dst, 0) == 0 }
-        }
-        guard cloned else { return .failed("clonefile failed for \(copyPath)") }
-
-        // Verify the clone byte-for-byte before we swap it in.
-        guard FileHashing.sha256(tempURL) == masterHash else {
-            try? fm.removeItem(at: tempURL)
-            return .failed("clone verification failed for \(copyPath)")
-        }
-
-        // Restore the copy's own permissions + mtime onto the clone.
-        var restore: [FileAttributeKey: Any] = [:]
-        if let perms { restore[.posixPermissions] = perms }
-        if let mtime { restore[.modificationDate] = mtime }
-        if !restore.isEmpty { try? fm.setAttributes(restore, ofItemAtPath: tempPath) }
-
-        // Atomic swap (same volume => rename is atomic). Original stays intact on failure.
-        let swapped = tempPath.withCString { t in copyPath.withCString { c in rename(t, c) == 0 } }
-        guard swapped else {
-            try? fm.removeItem(at: tempURL)
-            return .failed("atomic swap failed for \(copyPath)")
-        }
-        return .reclaimed(bytes: reclaimed)
     }
 
     // MARK: Batch + estimate

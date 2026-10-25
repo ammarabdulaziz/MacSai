@@ -11,7 +11,7 @@ import Foundation
 /// is Developer ID signed and notarized, since the shared state is small,
 /// JSON-serializable, and not security-sensitive.
 public enum SharedAppState {
-    public static let suiteName = "com.macclean.shared"
+    public static let suiteName = "com.ammarabdulaziz.macsai.shared"
 
     public static var defaults: UserDefaults {
         UserDefaults(suiteName: suiteName) ?? .standard

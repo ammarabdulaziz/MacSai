@@ -7,7 +7,7 @@ struct MacCleanApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var appState = AppState()
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("showMenuBarWidget") private var showMenuBarWidget = true
+    @AppStorage("showMenuBarWidget") private var showMenuBarWidget = false
     @AppStorage("menuBarFirstLaunchDone") private var menuBarFirstLaunchDone = false
     @AppStorage(AppLanguage.defaultsKey, store: SharedAppState.defaults) private var appLanguageRaw = AppLanguage.system.rawValue
     @State private var showOnboarding = false

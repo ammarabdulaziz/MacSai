@@ -237,16 +237,14 @@ public actor CleaningEngine {
 
             case .trash:
                 do {
-                    var resulting: NSURL?
-                    try FileManager.default.trashItem(at: item.url, resultingItemURL: &resulting)
+                    let trashURL = try GuardedFileOperations.trash(
+                        item.url, inode: item.inode, device: item.deviceID)
                     removedCount += 1
                     freedBytes += realSize
                     removedURLs.insert(item.url)
-                    if let trashURL = resulting as URL? {
-                        trashedItems.append(
-                            TrashedItem(originalURL: item.url, trashURL: trashURL, bytes: realSize)
-                        )
-                    }
+                    trashedItems.append(
+                        TrashedItem(originalURL: item.url, trashURL: trashURL, bytes: realSize)
+                    )
                     logOperation(path: item.url, size: realSize, dryRun: false)
                 } catch let nsError as NSError where Self.isBenignMissingFile(nsError) {
                     // Cache churn: scanner saw the file, but a daemon
@@ -264,7 +262,7 @@ public actor CleaningEngine {
 
             case .permanent:
                 do {
-                    try FileManager.default.removeItem(at: item.url)
+                    try GuardedFileOperations.remove(item.url, inode: item.inode, device: item.deviceID)
                     removedCount += 1
                     freedBytes += realSize
                     removedURLs.insert(item.url)
