@@ -7,12 +7,28 @@ the unpublished v1.26.0 changes from upstream main.
 ## Install this version on your Mac
 
 Requires macOS 14 or later and a Swift 6.1 toolchain (Xcode 16.3 or later).
+Open Xcode once after installing or updating it to complete its setup.
 
 ```bash
 git clone https://github.com/ammarabdulaziz/MacSai.git
 cd MacSai
 bash scripts/install-personal.sh
 ```
+
+If manifest loading fails with `Undefined symbols` referring to
+`PackageDescription`, check the selected toolchain with `xcode-select -p`,
+`xcrun --find swift`, and `xcrun swift --version`. An incomplete or mismatched
+Command Line Tools installation can cause this before any app code is built.
+With a complete Xcode installation at `/Applications/Xcode.app`, select its
+toolchain for this build only:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer bash scripts/install-personal.sh
+```
+
+This does not change the system-wide `xcode-select` setting. If Xcode is elsewhere,
+adjust the path. The installer checks Swift's version and loads the manifest
+before resolving dependencies or installing anything.
 
 The installer runs the full tests, compiles the current source for your Mac,
 verifies the local code signature, and installs `~/Applications/Mac Sai Personal.app`.

@@ -11,10 +11,46 @@ if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 14 ]; then
     echo "macOS 14 or later is required."
     exit 1
 fi
-xcrun --find swift >/dev/null
-swift package resolve --force-resolved-versions
+if ! MACSAI_SWIFT=$(xcrun --find swift); then
+    echo "Swift was not found. Install Xcode 16.3 or later and open it once to finish setup." >&2
+    exit 1
+fi
+# Use the selected developer toolchain consistently, including child build scripts.
+# A different swift earlier in PATH can otherwise mix package-manager components.
+export PATH="$(dirname "$MACSAI_SWIFT"):$PATH"
+SWIFT_VERSION=$("$MACSAI_SWIFT" --version)
+echo "Swift executable: $MACSAI_SWIFT"
+echo "$SWIFT_VERSION"
+read -r SWIFT_MAJOR SWIFT_MINOR <<< "$(echo "$SWIFT_VERSION" | sed -nE 's/.*Swift version ([0-9]+)\.([0-9]+).*/\1 \2/p')"
+if [[ ! "$SWIFT_MAJOR" =~ ^[0-9]+$ || ! "$SWIFT_MINOR" =~ ^[0-9]+$ ]]; then
+    echo "Could not determine the Swift version. Use a Swift 6.1 or later toolchain." >&2
+    exit 1
+fi
+if (( SWIFT_MAJOR < 6 || (SWIFT_MAJOR == 6 && SWIFT_MINOR < 1) )); then
+    echo "Swift 6.1 or later is required by the locked dependencies. Install Xcode 16.3 or later." >&2
+    exit 1
+fi
+# Detect a broken/mismatched PackageDescription installation before fetching
+# dependencies. This checks the actual manifest, not just swift --version.
+if ! "$MACSAI_SWIFT" package dump-package >/dev/null; then
+    cat >&2 <<'TOOLCHAIN_HELP'
+Swift could not load Package.swift. Nothing was installed.
+If the error mentions undefined PackageDescription symbols, the selected
+Command Line Tools / Swift installation may be incomplete or mismatched.
+Install or update Xcode 16.3 or later, then open it once to finish setup.
+If Xcode is installed at /Applications/Xcode.app, retry with:
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer bash scripts/install-personal.sh
+This selects Xcode for this build only. It does not change xcode-select globally.
+If it still fails, share the output of:
+  xcode-select -p
+  xcrun --find swift
+  xcrun swift --version
+TOOLCHAIN_HELP
+    exit 1
+fi
+"$MACSAI_SWIFT" package resolve --force-resolved-versions
 echo "Testing the current source checkout..."
-swift test
+"$MACSAI_SWIFT" test
 BUILD_ARCHS="--arch $(uname -m)" bash scripts/build-dmg.sh --app-only
 APP_BUNDLE=".build/dmg/Mac Sai Personal.app"
 codesign --verify --deep --strict "$APP_BUNDLE"
